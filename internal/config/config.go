@@ -25,7 +25,7 @@ type Config struct {
 	EncryptionKey   string
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(strict bool) (*Config, error) {
 	_ = godotenv.Load() // Ignore error if .env file not found
 
 	var err error
@@ -46,37 +46,55 @@ func LoadConfig() (*Config, error) {
 	cfg.DBPort, err = getEnv("DB_PORT")
 	if err != nil { return nil, err }
 
-	cfg.RedisAddr, err = getEnv("REDIS_ADDR")
+	// Helper for conditional strictness
+	getEnvOrSkip := func(key string) (string, error) {
+		val, err := getEnv(key)
+		if err != nil {
+			if strict {
+				return "", err
+			}
+			return "", nil
+		}
+		return val, nil
+	}
+
+	cfg.RedisAddr, err = getEnvOrSkip("REDIS_ADDR")
 	if err != nil { return nil, err }
 
 	// Optional
 	cfg.RedisPassword, _ = getEnv("REDIS_PASSWORD")
 
-	cfg.ServerPort, err = getEnv("SERVER_PORT")
+	cfg.ServerPort, err = getEnvOrSkip("SERVER_PORT")
 	if err != nil { return nil, err }
 
-	cfg.JWTSecret, err = getEnv("JWT_SECRET")
+	cfg.JWTSecret, err = getEnvOrSkip("JWT_SECRET")
 	if err != nil { return nil, err }
 
-	accessTokenStr, err := getEnv("ACCESS_TOKEN_EXP_MINUTES")
+	accessTokenStr, err := getEnvOrSkip("ACCESS_TOKEN_EXP_MINUTES")
 	if err != nil { return nil, err }
-	cfg.AccessTokenExp, err = strconv.Atoi(accessTokenStr)
-	if err != nil { return nil, fmt.Errorf("ACCESS_TOKEN_EXP_MINUTES must be an integer") }
+	if accessTokenStr != "" {
+		cfg.AccessTokenExp, err = strconv.Atoi(accessTokenStr)
+		if err != nil { return nil, fmt.Errorf("ACCESS_TOKEN_EXP_MINUTES must be an integer") }
+	}
 
-	refreshTokenStr, err := getEnv("REFRESH_TOKEN_EXP_DAYS")
+	refreshTokenStr, err := getEnvOrSkip("REFRESH_TOKEN_EXP_DAYS")
 	if err != nil { return nil, err }
-	cfg.RefreshTokenExp, err = strconv.Atoi(refreshTokenStr)
-	if err != nil { return nil, fmt.Errorf("REFRESH_TOKEN_EXP_DAYS must be an integer") }
+	if refreshTokenStr != "" {
+		cfg.RefreshTokenExp, err = strconv.Atoi(refreshTokenStr)
+		if err != nil { return nil, fmt.Errorf("REFRESH_TOKEN_EXP_DAYS must be an integer") }
+	}
 
-	authCodeStr, err := getEnv("AUTH_CODE_EXP_MINUTES")
+	authCodeStr, err := getEnvOrSkip("AUTH_CODE_EXP_MINUTES")
 	if err != nil { return nil, err }
-	cfg.AuthCodeExp, err = strconv.Atoi(authCodeStr)
-	if err != nil { return nil, fmt.Errorf("AUTH_CODE_EXP_MINUTES must be an integer") }
+	if authCodeStr != "" {
+		cfg.AuthCodeExp, err = strconv.Atoi(authCodeStr)
+		if err != nil { return nil, fmt.Errorf("AUTH_CODE_EXP_MINUTES must be an integer") }
+	}
 
-	cfg.APIVersion, err = getEnv("API_VERSION")
+	cfg.APIVersion, err = getEnvOrSkip("API_VERSION")
 	if err != nil { return nil, err }
 
-	cfg.EncryptionKey, err = getEnv("ENCRYPTION_KEY")
+	cfg.EncryptionKey, err = getEnvOrSkip("ENCRYPTION_KEY")
 	if err != nil { return nil, err }
 
 	return cfg, nil
