@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -78,8 +79,11 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	}
 
 	// Password complexity
-	if req.Password != "" && !isValidPassword(req.Password) {
-		validationErrors["password"] = "Password must be at least 8 chars long and contain uppercase, lowercase, number, and symbol"
+	if req.Password != "" {
+		passErrors := validatePassword(req.Password)
+		if len(passErrors) > 0 {
+			validationErrors["password"] = "Password must " + strings.Join(passErrors, ", ")
+		}
 	}
 
 	if len(validationErrors) > 0 {
@@ -191,13 +195,22 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func isValidPassword(s string) bool {
+func validatePassword(s string) []string {
+	var errors []string
 	if len(s) < 8 {
-		return false
+		errors = append(errors, "be at least 8 characters long")
 	}
-	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(s)
-	hasLower := regexp.MustCompile(`[a-z]`).MatchString(s)
-	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(s)
-	hasSymbol := regexp.MustCompile(`[^a-zA-Z0-9]`).MatchString(s)
-	return hasUpper && hasLower && hasNumber && hasSymbol
+	if !regexp.MustCompile(`[A-Z]`).MatchString(s) {
+		errors = append(errors, "contain at least one uppercase letter")
+	}
+	if !regexp.MustCompile(`[a-z]`).MatchString(s) {
+		errors = append(errors, "contain at least one lowercase letter")
+	}
+	if !regexp.MustCompile(`[0-9]`).MatchString(s) {
+		errors = append(errors, "contain at least one number")
+	}
+	if !regexp.MustCompile(`[^a-zA-Z0-9]`).MatchString(s) {
+		errors = append(errors, "contain at least one special character")
+	}
+	return errors
 }
