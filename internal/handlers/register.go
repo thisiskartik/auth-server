@@ -58,7 +58,7 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	// Encrypt password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to process password")
+		h.RespondInternalError(c, err, ErrCrypto)
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	}
 
 	if err := h.DB.Create(&user).Error; err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to create user")
+		h.RespondInternalError(c, err, ErrDatabase)
 		return
 	}
 
@@ -95,21 +95,21 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 	// Generate Secret
 	secret, err := utils.GenerateRandomString(32)
 	if err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to generate secret")
+		h.RespondInternalError(c, err, ErrCrypto)
 		return
 	}
 
 	// Encrypt Secret
 	encryptedSecret, err := utils.Encrypt(secret, h.Config.EncryptionKey)
 	if err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to encrypt secret")
+		h.RespondInternalError(c, err, ErrCrypto)
 		return
 	}
 
 	// Generate Keys
 	privKey, pubKey, err := utils.GenerateRSAKeyPair()
 	if err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to generate keys")
+		h.RespondInternalError(c, err, ErrCrypto)
 		return
 	}
 
@@ -121,7 +121,7 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 	}
 
 	if err := h.DB.Create(&client).Error; err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to create client")
+		h.RespondInternalError(c, err, ErrDatabase)
 		return
 	}
 

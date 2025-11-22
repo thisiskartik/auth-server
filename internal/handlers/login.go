@@ -55,7 +55,7 @@ func (h *Handler) Login(c *gin.Context) {
 	// 3. Generate Authorization Code
 	code, err := utils.GenerateRandomString(16)
 	if err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to generate code")
+		h.RespondInternalError(c, err, ErrCrypto)
 		return
 	}
 
@@ -70,14 +70,14 @@ func (h *Handler) Login(c *gin.Context) {
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to marshal data")
+		h.RespondInternalError(c, err, ErrJSON)
 		return
 	}
 
 	// Store in Redis
 	err = h.RedisClient.Set(context.Background(), code, jsonData, time.Duration(h.Config.AuthCodeExp)*time.Minute).Err()
 	if err != nil {
-		h.RespondError(c, http.StatusInternalServerError, err, "Failed to store code")
+		h.RespondInternalError(c, err, ErrRedis)
 		return
 	}
 

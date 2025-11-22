@@ -3,12 +3,22 @@ package handlers
 import (
 	"auth-system/internal/config"
 	"auth-system/internal/database"
-	"runtime"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"github.com/redis/go-redis/v9"
+)
+
+// Error Codes
+const (
+	ErrDatabase = 100
+	ErrRedis    = 101
+	ErrCrypto   = 102
+	ErrToken    = 103
+	ErrJSON     = 104
+	ErrGeneric  = 105
 )
 
 type Handler struct {
@@ -26,23 +36,28 @@ func NewHandler(cfg *config.Config) *Handler {
 }
 
 type ErrorResponse struct {
-	Error string `json:"error"`
-	Code  string `json:"code,omitempty"`
+	Error     string `json:"error"`
+	Code      int    `json:"code,omitempty"`
+	TraceID   string `json:"trace_id,omitempty"`
 }
 
 func (h *Handler) RespondError(c *gin.Context, status int, err error, message string) {
-	code := ""
-	if status >= 500 {
-		// Generate unique error code
-		_, file, line, _ := runtime.Caller(1)
-		code = uuid.New().String()
-		// In a real app, we would log this code with the error and stack trace
-		// log.Printf("Error %s: %v in %s:%d", code, err, file, line)
-		_ = file
-		_ = line
-	}
 	c.JSON(status, ErrorResponse{
 		Error: message,
-		Code:  code,
+	})
+}
+
+func (h *Handler) RespondInternalError(c *gin.Context, err error, code int) {
+	// Generate unique trace ID
+	traceID := uuid.New().String()
+	
+	// In a real app, log the error, traceID, and file info
+	// _, file, line, _ := runtime.Caller(1)
+	// log.Printf("TraceID: %s, Error: %v, File: %s:%d", traceID, err, file, line)
+	
+	c.JSON(http.StatusInternalServerError, ErrorResponse{
+		Error:   "Internal Server Error",
+		Code:    code,
+		TraceID: traceID,
 	})
 }
