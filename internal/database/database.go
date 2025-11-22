@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"auth-system/internal/config"
-	"auth-system/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -15,12 +14,6 @@ func ConnectDB(cfg *config.Config) error {
 		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return err
-	}
-
-	// Auto Migrate
-	err = db.AutoMigrate(&models.User{}, &models.Client{})
 	if err != nil {
 		return err
 	}

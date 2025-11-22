@@ -17,30 +17,14 @@ type TokenRequest struct {
 	CodeVerifier string `json:"code_verifier"` // Optional in strict prompt, but needed for PKCE
 }
 
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
 func (h *Handler) OAuthToken(c *gin.Context) {
-	// 1. Basic Auth
-	clientID, clientSecret, ok := c.Request.BasicAuth()
+	// 1. Authenticate Client
+	client, ok := h.authenticateClient(c)
 	if !ok {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Basic auth required")
-		return
-	}
-
-	// Authenticate Client
-	var client models.Client
-	if err := h.DB.Where("id = ?", clientID).First(&client).Error; err != nil {
-		h.RespondError(c, http.StatusUnauthorized, err, "Invalid Client")
-		return
-	}
-
-	// Decrypt secret to compare
-	decryptedSecret, err := utils.Decrypt(client.Secret, h.Config.EncryptionKey)
-	if err != nil {
-		h.RespondInternalError(c, err, 3001)
-		return
-	}
-
-	if decryptedSecret != clientSecret {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid Client Secret")
 		return
 	}
 
@@ -61,6 +45,12 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	var data AuthCodeData
 	if err := json.Unmarshal([]byte(val), &data); err != nil {
 		h.RespondInternalError(c, err, 3002)
+		return
+	}
+
+	// Verify Code belongs to Client
+	if data.ClientID != client.ID.String() {
+		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid code for this client")
 		return
 	}
 
@@ -104,26 +94,25 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	h.RedisClient.Del(context.Background(), req.Code)
 
 	// 6. Return Response
-	// Refresh Token in HTTP Only Cookie
-	// "Returns the `access_token` in the body and `refresh_token` in the http only cookie."
-	
-	c.SetCookie("refresh_token", refreshToken, h.Config.RefreshTokenExp*24*60*60, "/", "", false, true) // Secure=false for dev
+	// Return Refresh Token in Body as requested
 	
 	slog.Info("Token exchanged", "client_id", client.ID, "user_id", data.UserID)
 	c.JSON(http.StatusOK, gin.H{
-		"access_token": accessToken,
-		"token_type":   "Bearer",
-		"expires_in":   h.Config.AccessTokenExp * 60,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"token_type":    "Bearer",
+		"expires_in":    h.Config.AccessTokenExp * 60,
 	})
 }
 
 func (h *Handler) OAuthRefresh(c *gin.Context) {
-	// 1. Read Refresh Token from Cookie
-	refreshToken, err := c.Cookie("refresh_token")
-	if err != nil {
-		h.RespondError(c, http.StatusUnauthorized, err, "Refresh token missing")
+	// 1. Read Refresh Token from Body
+	var req RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.RespondError(c, http.StatusBadRequest, err, "Refresh token required in body")
 		return
 	}
+	refreshToken := req.RefreshToken
 
 	// 2. Validate Refresh Token
 	token, claims, err := utils.ValidateRefreshToken(refreshToken, h.Config.JWTSecret)

@@ -12,26 +12,8 @@ import (
 )
 
 func (h *Handler) ClientMe(c *gin.Context) {
-	clientID, clientSecret, ok := c.Request.BasicAuth()
+	client, ok := h.authenticateClient(c)
 	if !ok {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Basic auth required")
-		return
-	}
-
-	var client models.Client
-	if err := h.DB.Where("id = ?", clientID).First(&client).Error; err != nil {
-		h.RespondError(c, http.StatusUnauthorized, err, "Invalid Client")
-		return
-	}
-
-	decryptedSecret, err := utils.Decrypt(client.Secret, h.Config.EncryptionKey)
-	if err != nil {
-		h.RespondInternalError(c, err, 4001)
-		return
-	}
-
-	if decryptedSecret != clientSecret {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid Client Secret")
 		return
 	}
 

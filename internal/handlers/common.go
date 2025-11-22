@@ -3,6 +3,7 @@ package handlers
 import (
 	"auth-system/internal/config"
 	"auth-system/internal/database"
+	"auth-system/internal/middleware"
 	"log/slog"
 	"net/http"
 
@@ -33,16 +34,30 @@ type ErrorResponse struct {
 }
 
 func (h *Handler) RespondError(c *gin.Context, status int, err error, message string) {
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	
 	// Log client errors as Warn/Info
-	slog.Warn("Client Error", "status", status, "message", message, "error", err)
+	slog.Warn("Client Error", 
+		"status", status, 
+		"message", message, 
+		"error", err,
+		"trace_id", traceID,
+	)
 	c.JSON(status, ErrorResponse{
 		Error: message,
 	})
 }
 
 func (h *Handler) RespondInternalError(c *gin.Context, err error, code int) {
-	// Generate unique trace ID
-	traceID := uuid.New().String()
+	// Get Trace ID from Middleware
+	val, exists := c.Get(middleware.TraceIDKey)
+	traceID := ""
+	if exists {
+		traceID = val.(string)
+	} else {
+		// Fallback
+		traceID = uuid.New().String()
+	}
 
 	// Log the full error details
 	slog.Error("Internal Server Error",

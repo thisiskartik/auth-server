@@ -4,6 +4,7 @@ import (
 	"auth-system/internal/config"
 	"auth-system/internal/database"
 	"auth-system/internal/handlers"
+	"auth-system/internal/middleware"
 	"fmt"
 	"log/slog"
 	"os"
@@ -41,7 +42,10 @@ func main() {
 	h := handlers.NewHandler(cfg)
 
 	// 5. Setup Router
-	r := gin.Default()
+	r := gin.New() // Use New() to avoid default middleware
+	r.Use(gin.Recovery())
+	r.Use(middleware.TraceIDMiddleware())
+	r.Use(middleware.LoggerMiddleware())
 
 	// Base Path
 	basePath := fmt.Sprintf("/api/%s/authorization-server", cfg.APIVersion)

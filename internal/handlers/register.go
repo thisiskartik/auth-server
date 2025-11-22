@@ -17,14 +17,14 @@ type RegisterRequest struct {
 	Name      string `json:"name"` // Client only
 	FirstName string `json:"first_name"` // User only
 	LastName  string `json:"last_name"` // User only
-	Email     string `json:"email"` // User only
+	Email     string `json:"email" binding:"omitempty,email"` // User only
 	Password  string `json:"password"` // User only
 }
 
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, err.Error())
+		h.RespondError(c, http.StatusBadRequest, err, "Validation failed: "+err.Error())
 		return
 	}
 
@@ -38,13 +38,13 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	// Validation
 	if req.FirstName == "" || req.LastName == "" || req.Email == "" || req.Password == "" {
-		h.RespondError(c, http.StatusBadRequest, nil, "Missing required fields for user")
+		h.RespondError(c, http.StatusBadRequest, nil, "Missing required fields for user: first_name, last_name, email, password")
 		return
 	}
 
 	// Password complexity
 	if !isValidPassword(req.Password) {
-		h.RespondError(c, http.StatusBadRequest, nil, "Password does not meet complexity requirements")
+		h.RespondError(c, http.StatusBadRequest, nil, "Password does not meet complexity requirements (min 8 chars, 1 upper, 1 lower, 1 number, 1 symbol)")
 		return
 	}
 
@@ -101,8 +101,9 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 		return
 	}
 
-	// Encrypt Secret
-	encryptedSecret, err := utils.Encrypt(secret, h.Config.EncryptionKey)
+	// Hash Secret (One-way hashing as per request)
+	// We use HashPassword (bcrypt) instead of Encrypt (AES)
+	hashedSecret, err := utils.HashPassword(secret)
 	if err != nil {
 		h.RespondInternalError(c, err, 1004)
 		return
@@ -117,7 +118,7 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 
 	client := models.Client{
 		Name:       req.Name,
-		Secret:     encryptedSecret,
+		Secret:     hashedSecret,
 		PrivateKey: privKey,
 		PublicKey:  pubKey,
 	}
@@ -137,7 +138,7 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 	}{
 		ID:        client.ID,
 		Name:      client.Name,
-		Secret:    secret,
+		Secret:    secret, // Return PLAIN secret once
 		PublicKey: client.PublicKey,
 		CreatedAt: client.CreatedAt,
 		UpdatedAt: client.UpdatedAt,
