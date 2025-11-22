@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +29,7 @@ func (h *Handler) Register(c *gin.Context) {
 		// Handle Validator Errors
 		var ve validator.ValidationErrors
 		if errors.As(err, &ve) {
-			out := make(map[string]string)
+			out := make(map[string]any)
 			for _, fe := range ve {
 				out[fe.Field()] = msgForTag(fe.Tag())
 			}
@@ -63,7 +62,7 @@ func msgForTag(tag string) string {
 
 func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	// Collect Errors
-	validationErrors := make(map[string]string)
+	validationErrors := make(map[string]any)
 
 	if req.FirstName == "" {
 		validationErrors["first_name"] = "This field is required"
@@ -82,7 +81,7 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	if req.Password != "" {
 		passErrors := validatePassword(req.Password)
 		if len(passErrors) > 0 {
-			validationErrors["password"] = "Password must " + strings.Join(passErrors, ", ")
+			validationErrors["password"] = passErrors
 		}
 	}
 
@@ -124,7 +123,7 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 }
 
 func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
-	validationErrors := make(map[string]string)
+	validationErrors := make(map[string]any)
 	
 	// Validation
 	if req.Name == "" {
