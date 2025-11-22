@@ -34,7 +34,7 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	// Decrypt secret to compare
 	decryptedSecret, err := utils.Decrypt(client.Secret, h.Config.EncryptionKey)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrCrypto)
+		h.RespondInternalError(c, err, 3001)
 		return
 	}
 
@@ -59,7 +59,7 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 
 	var data AuthCodeData
 	if err := json.Unmarshal([]byte(val), &data); err != nil {
-		h.RespondInternalError(c, err, ErrJSON)
+		h.RespondInternalError(c, err, 3002)
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	// Access Token: Sign with CLIENT's Private Key
 	accessToken, err := utils.GenerateAccessToken(client.PrivateKey, data.UserID, data.ClientID, h.Config.AccessTokenExp)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrToken)
+		h.RespondInternalError(c, err, 3003)
 		return
 	}
 
@@ -95,7 +95,7 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	// I'll use JWTSecret.
 	refreshToken, err := utils.GenerateRefreshToken(h.Config.JWTSecret, data.UserID, data.ClientID, h.Config.RefreshTokenExp)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrToken)
+		h.RespondInternalError(c, err, 3004)
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *Handler) OAuthRefresh(c *gin.Context) {
 	// 4. Create New Access Token
 	accessToken, err := utils.GenerateAccessToken(client.PrivateKey, userID, clientID, h.Config.AccessTokenExp)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrToken)
+		h.RespondInternalError(c, err, 3005)
 		return
 	}
 

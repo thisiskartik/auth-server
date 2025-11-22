@@ -55,7 +55,7 @@ func (h *Handler) Login(c *gin.Context) {
 	// 3. Generate Authorization Code
 	code, err := utils.GenerateRandomString(16)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrCrypto)
+		h.RespondInternalError(c, err, 2001)
 		return
 	}
 
@@ -70,14 +70,14 @@ func (h *Handler) Login(c *gin.Context) {
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrJSON)
+		h.RespondInternalError(c, err, 2002)
 		return
 	}
 
 	// Store in Redis
 	err = h.RedisClient.Set(context.Background(), code, jsonData, time.Duration(h.Config.AuthCodeExp)*time.Minute).Err()
 	if err != nil {
-		h.RespondInternalError(c, err, ErrRedis)
+		h.RespondInternalError(c, err, 2003)
 		return
 	}
 

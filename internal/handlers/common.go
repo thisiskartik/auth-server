@@ -11,16 +11,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Error Codes
-const (
-	ErrDatabase = 100
-	ErrRedis    = 101
-	ErrCrypto   = 102
-	ErrToken    = 103
-	ErrJSON     = 104
-	ErrGeneric  = 105
-)
-
 type Handler struct {
 	DB          *gorm.DB
 	RedisClient *redis.Client
@@ -51,9 +41,8 @@ func (h *Handler) RespondInternalError(c *gin.Context, err error, code int) {
 	// Generate unique trace ID
 	traceID := uuid.New().String()
 	
-	// In a real app, log the error, traceID, and file info
-	// _, file, line, _ := runtime.Caller(1)
-	// log.Printf("TraceID: %s, Error: %v, File: %s:%d", traceID, err, file, line)
+	// In a real app, you would log the error here:
+	// log.Printf("[TraceID: %s] Error Code: %d, Error: %v", traceID, code, err)
 	
 	c.JSON(http.StatusInternalServerError, ErrorResponse{
 		Error:   "Internal Server Error",

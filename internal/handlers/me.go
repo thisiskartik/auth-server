@@ -26,7 +26,7 @@ func (h *Handler) ClientMe(c *gin.Context) {
 
 	decryptedSecret, err := utils.Decrypt(client.Secret, h.Config.EncryptionKey)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrCrypto)
+		h.RespondInternalError(c, err, 4001)
 		return
 	}
 

@@ -58,7 +58,7 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	// Encrypt password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrCrypto)
+		h.RespondInternalError(c, err, 1001)
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	}
 
 	if err := h.DB.Create(&user).Error; err != nil {
-		h.RespondInternalError(c, err, ErrDatabase)
+		h.RespondInternalError(c, err, 1002)
 		return
 	}
 
@@ -95,21 +95,21 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 	// Generate Secret
 	secret, err := utils.GenerateRandomString(32)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrCrypto)
+		h.RespondInternalError(c, err, 1003)
 		return
 	}
 
 	// Encrypt Secret
 	encryptedSecret, err := utils.Encrypt(secret, h.Config.EncryptionKey)
 	if err != nil {
-		h.RespondInternalError(c, err, ErrCrypto)
+		h.RespondInternalError(c, err, 1004)
 		return
 	}
 
 	// Generate Keys
 	privKey, pubKey, err := utils.GenerateRSAKeyPair()
 	if err != nil {
-		h.RespondInternalError(c, err, ErrCrypto)
+		h.RespondInternalError(c, err, 1005)
 		return
 	}
 
@@ -121,7 +121,7 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 	}
 
 	if err := h.DB.Create(&client).Error; err != nil {
-		h.RespondInternalError(c, err, ErrDatabase)
+		h.RespondInternalError(c, err, 1006)
 		return
 	}
 
