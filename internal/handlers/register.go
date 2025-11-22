@@ -3,12 +3,14 @@ package handlers
 import (
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
+	"errors"
 	"log/slog"
 	"net/http"
 	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +26,18 @@ type RegisterRequest struct {
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, "Validation failed: "+err.Error())
+		// Handle Validator Errors
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			out := make(map[string]string)
+			for _, fe := range ve {
+				out[fe.Field()] = msgForTag(fe.Tag())
+			}
+			h.RespondValidationError(c, out)
+			return
+		}
+		// Handle JSON Parsing Errors
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
 		return
 	}
 
@@ -35,16 +48,42 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 }
 
+func msgForTag(tag string) string {
+	switch tag {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email"
+	case "oneof":
+		return "Should be one of [user client]"
+	}
+	return "Invalid value"
+}
+
 func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
-	// Validation
-	if req.FirstName == "" || req.LastName == "" || req.Email == "" || req.Password == "" {
-		h.RespondError(c, http.StatusBadRequest, nil, "Missing required fields for user: first_name, last_name, email, password")
-		return
+	// Collect Errors
+	validationErrors := make(map[string]string)
+
+	if req.FirstName == "" {
+		validationErrors["first_name"] = "This field is required"
+	}
+	if req.LastName == "" {
+		validationErrors["last_name"] = "This field is required"
+	}
+	if req.Email == "" {
+		validationErrors["email"] = "This field is required"
+	}
+	if req.Password == "" {
+		validationErrors["password"] = "This field is required"
 	}
 
 	// Password complexity
-	if !isValidPassword(req.Password) {
-		h.RespondError(c, http.StatusBadRequest, nil, "Password does not meet complexity requirements (min 8 chars, 1 upper, 1 lower, 1 number, 1 symbol)")
+	if req.Password != "" && !isValidPassword(req.Password) {
+		validationErrors["password"] = "Password must be at least 8 chars long and contain uppercase, lowercase, number, and symbol"
+	}
+
+	if len(validationErrors) > 0 {
+		h.RespondValidationError(c, validationErrors)
 		return
 	}
 
@@ -52,7 +91,8 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 	var count int64
 	h.DB.Model(&models.User{}).Where("email = ?", req.Email).Count(&count)
 	if count > 0 {
-		h.RespondError(c, http.StatusBadRequest, nil, "Email already registered")
+		validationErrors["email"] = "Email already registered"
+		h.RespondValidationError(c, validationErrors)
 		return
 	}
 
@@ -80,9 +120,12 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 }
 
 func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
+	validationErrors := make(map[string]string)
+	
 	// Validation
 	if req.Name == "" {
-		h.RespondError(c, http.StatusBadRequest, nil, "Name required for client")
+		validationErrors["name"] = "This field is required"
+		h.RespondValidationError(c, validationErrors)
 		return
 	}
 
@@ -90,7 +133,8 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 	var count int64
 	h.DB.Model(&models.Client{}).Where("name = ?", req.Name).Count(&count)
 	if count > 0 {
-		h.RespondError(c, http.StatusBadRequest, nil, "Client name already registered")
+		validationErrors["name"] = "Client name already registered"
+		h.RespondValidationError(c, validationErrors)
 		return
 	}
 
@@ -101,8 +145,7 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 		return
 	}
 
-	// Hash Secret (One-way hashing as per request)
-	// We use HashPassword (bcrypt) instead of Encrypt (AES)
+	// Hash Secret
 	hashedSecret, err := utils.HashPassword(secret)
 	if err != nil {
 		h.RespondInternalError(c, err, 1004)

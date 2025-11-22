@@ -28,9 +28,10 @@ func NewHandler(cfg *config.Config) *Handler {
 }
 
 type ErrorResponse struct {
-	Error     string `json:"error"`
-	Code      int    `json:"code,omitempty"`
-	TraceID   string `json:"trace_id,omitempty"`
+	Error     string            `json:"error"`
+	Fields    map[string]string `json:"fields,omitempty"`
+	Code      int               `json:"code,omitempty"`
+	TraceID   string            `json:"trace_id,omitempty"`
 }
 
 func (h *Handler) RespondError(c *gin.Context, status int, err error, message string) {
@@ -45,6 +46,21 @@ func (h *Handler) RespondError(c *gin.Context, status int, err error, message st
 	)
 	c.JSON(status, ErrorResponse{
 		Error: message,
+	})
+}
+
+func (h *Handler) RespondValidationError(c *gin.Context, fields map[string]string) {
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	
+	slog.Warn("Validation Error",
+		"fields", fields,
+		"trace_id", traceID,
+	)
+	
+	c.JSON(http.StatusBadRequest, ErrorResponse{
+		Error:   "Validation Failed",
+		Fields:  fields,
+		TraceID: traceID.(string),
 	})
 }
 
