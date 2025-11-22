@@ -18,7 +18,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	// 1. Load Config
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig(true)
 	if err != nil {
 		slog.Error("Failed to load config", "error", err)
 		os.Exit(1)
