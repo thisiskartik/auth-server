@@ -3,6 +3,7 @@ package handlers
 import (
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"time"
@@ -74,6 +75,7 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 		return
 	}
 
+	slog.Info("User registered", "user_id", user.ID, "email", user.Email)
 	c.JSON(http.StatusCreated, user)
 }
 
@@ -141,6 +143,7 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 		UpdatedAt: client.UpdatedAt,
 	}
 
+	slog.Info("Client registered", "client_id", client.ID, "client_name", client.Name)
 	c.JSON(http.StatusCreated, response)
 }
 

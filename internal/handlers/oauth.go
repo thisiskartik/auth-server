@@ -5,6 +5,7 @@ import (
 	"auth-system/internal/utils"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -108,6 +109,7 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	
 	c.SetCookie("refresh_token", refreshToken, h.Config.RefreshTokenExp*24*60*60, "/", "", false, true) // Secure=false for dev
 	
+	slog.Info("Token exchanged", "client_id", client.ID, "user_id", data.UserID)
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": accessToken,
 		"token_type":   "Bearer",
@@ -147,6 +149,7 @@ func (h *Handler) OAuthRefresh(c *gin.Context) {
 		return
 	}
 
+	slog.Info("Token refreshed", "client_id", client.ID, "user_id", userID)
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": accessToken,
 		"token_type":   "Bearer",

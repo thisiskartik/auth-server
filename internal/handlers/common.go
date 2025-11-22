@@ -3,12 +3,13 @@ package handlers
 import (
 	"auth-system/internal/config"
 	"auth-system/internal/database"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 type Handler struct {
@@ -32,6 +33,8 @@ type ErrorResponse struct {
 }
 
 func (h *Handler) RespondError(c *gin.Context, status int, err error, message string) {
+	// Log client errors as Warn/Info
+	slog.Warn("Client Error", "status", status, "message", message, "error", err)
 	c.JSON(status, ErrorResponse{
 		Error: message,
 	})
@@ -40,10 +43,16 @@ func (h *Handler) RespondError(c *gin.Context, status int, err error, message st
 func (h *Handler) RespondInternalError(c *gin.Context, err error, code int) {
 	// Generate unique trace ID
 	traceID := uuid.New().String()
-	
-	// In a real app, you would log the error here:
-	// log.Printf("[TraceID: %s] Error Code: %d, Error: %v", traceID, code, err)
-	
+
+	// Log the full error details
+	slog.Error("Internal Server Error",
+		"trace_id", traceID,
+		"code", code,
+		"error", err,
+		"path", c.Request.URL.Path,
+		"method", c.Request.Method,
+	)
+
 	c.JSON(http.StatusInternalServerError, ErrorResponse{
 		Error:   "Internal Server Error",
 		Code:    code,

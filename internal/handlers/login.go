@@ -5,6 +5,7 @@ import (
 	"auth-system/internal/utils"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -81,5 +82,6 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	slog.Info("User logged in", "user_id", user.ID, "client_id", client.ID)
 	c.JSON(http.StatusOK, gin.H{"code": code})
 }
