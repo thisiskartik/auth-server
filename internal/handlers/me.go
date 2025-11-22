@@ -72,7 +72,12 @@ func (h *Handler) UserMe(c *gin.Context) {
 	}
 
 	// 4. Fetch User Details
-	userID := validClaims["sub"].(string)
+	userID, ok := validClaims["sub"].(string)
+	if !ok {
+		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token claims: sub")
+		return
+	}
+
 	var user models.User
 	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		h.RespondError(c, http.StatusNotFound, err, "User not found")

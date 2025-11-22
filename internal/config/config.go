@@ -60,15 +60,18 @@ func LoadConfig() (*Config, error) {
 
 	accessTokenStr, err := getEnv("ACCESS_TOKEN_EXP_MINUTES")
 	if err != nil { return nil, err }
-	cfg.AccessTokenExp, _ = strconv.Atoi(accessTokenStr)
+	cfg.AccessTokenExp, err = strconv.Atoi(accessTokenStr)
+	if err != nil { return nil, fmt.Errorf("ACCESS_TOKEN_EXP_MINUTES must be an integer") }
 
 	refreshTokenStr, err := getEnv("REFRESH_TOKEN_EXP_DAYS")
 	if err != nil { return nil, err }
-	cfg.RefreshTokenExp, _ = strconv.Atoi(refreshTokenStr)
+	cfg.RefreshTokenExp, err = strconv.Atoi(refreshTokenStr)
+	if err != nil { return nil, fmt.Errorf("REFRESH_TOKEN_EXP_DAYS must be an integer") }
 
 	authCodeStr, err := getEnv("AUTH_CODE_EXP_MINUTES")
 	if err != nil { return nil, err }
-	cfg.AuthCodeExp, _ = strconv.Atoi(authCodeStr)
+	cfg.AuthCodeExp, err = strconv.Atoi(authCodeStr)
+	if err != nil { return nil, fmt.Errorf("AUTH_CODE_EXP_MINUTES must be an integer") }
 
 	cfg.APIVersion, err = getEnv("API_VERSION")
 	if err != nil { return nil, err }

@@ -35,8 +35,8 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 		return
 	}
 
-	// 3. Check Redis for Code
-	val, err := h.RedisClient.Get(context.Background(), req.Code).Result()
+	// 3. Check Redis for Code & Delete immediately (Atomic)
+	val, err := h.RedisClient.GetDel(context.Background(), req.Code).Result()
 	if err != nil {
 		h.RespondError(c, http.StatusUnauthorized, err, "Invalid or expired code")
 		return
@@ -90,11 +90,7 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 		return
 	}
 
-	// 5. Delete Code (Single use)
-	h.RedisClient.Del(context.Background(), req.Code)
-
-	// 6. Return Response
-	// Return Refresh Token in Body as requested
+	// 5. Return Response
 	
 	slog.Info("Token exchanged", "client_id", client.ID, "user_id", data.UserID)
 	c.JSON(http.StatusOK, gin.H{
@@ -121,8 +117,16 @@ func (h *Handler) OAuthRefresh(c *gin.Context) {
 		return
 	}
 
-	userID := claims["sub"].(string)
-	clientID := claims["aud"].(string)
+	userID, ok := claims["sub"].(string)
+	if !ok {
+		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token claims: sub")
+		return
+	}
+	clientID, ok := claims["aud"].(string)
+	if !ok {
+		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token claims: aud")
+		return
+	}
 
 	// 3. Get Client to get Private Key
 	var client models.Client

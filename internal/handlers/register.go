@@ -118,8 +118,25 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 		return
 	}
 
+	// Create Response DTO to prevent leaking password
+	response := struct {
+		ID        uuid.UUID `json:"id"`
+		FirstName string    `json:"first_name"`
+		LastName  string    `json:"last_name"`
+		Email     string    `json:"email"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+	}{
+		ID:        user.ID,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}
+
 	slog.Info("User registered", "user_id", user.ID, "email", user.Email)
-	c.JSON(http.StatusCreated, user)
+	c.JSON(http.StatusCreated, response)
 }
 
 func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
