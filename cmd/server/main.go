@@ -54,6 +54,7 @@ func main() {
 		api.POST("/user/register", h.RegisterUser)
 		api.POST("/client/register", h.RegisterClient)
 		api.POST("/login", h.Login)
+		api.POST("/logout", h.Logout)
 		api.POST("/oauth/token", h.OAuthToken)
 		api.POST("/oauth/refresh", h.OAuthRefresh)
 		api.GET("/client/me", h.ClientMe)

@@ -35,7 +35,9 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	}
 
 	// 3. Check Redis for Code & Delete immediately (Atomic)
-	val, err := h.RedisClient.GetDel(context.Background(), req.Code).Result()
+	// Key format: auth_code:{code}
+	key := "auth_code:" + req.Code
+	val, err := h.RedisClient.GetDel(context.Background(), key).Result()
 	if err != nil {
 		h.RespondError(c, http.StatusUnauthorized, err, "Invalid or expired code")
 		return
@@ -107,6 +109,18 @@ func (h *Handler) OAuthRefresh(c *gin.Context) {
 		return
 	}
 	refreshToken := req.RefreshToken
+
+	// Check if blocked in Redis
+	key := "blocked_refresh_token:" + refreshToken
+	exists, err := h.RedisClient.Exists(context.Background(), key).Result()
+	if err != nil {
+		h.RespondInternalError(c, err, 3006)
+		return
+	}
+	if exists > 0 {
+		h.RespondError(c, http.StatusUnauthorized, nil, "Refresh token is blocked")
+		return
+	}
 
 	// 2. Validate Refresh Token
 	token, claims, err := utils.ValidateRefreshToken(refreshToken, h.Config.JWTSecret)
