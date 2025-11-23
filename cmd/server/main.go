@@ -51,7 +51,8 @@ func main() {
 	basePath := fmt.Sprintf("/api/%s/authorization-server", cfg.APIVersion)
 	api := r.Group(basePath)
 	{
-		api.POST("/register", h.Register)
+		api.POST("/user/register", h.RegisterUser)
+		api.POST("/client/register", h.RegisterClient)
 		api.POST("/login", h.Login)
 		api.POST("/oauth/token", h.OAuthToken)
 		api.POST("/oauth/refresh", h.OAuthRefresh)

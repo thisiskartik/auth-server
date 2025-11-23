@@ -4,177 +4,51 @@ import (
 	"auth-system/internal/middleware"
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
-	"errors"
 	"log/slog"
 	"net/http"
-	"reflect"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
-type RegisterRequest struct {
-	Type      string `json:"type" binding:"required,oneof=user client"`
-	Name      string `json:"name"`                            // Client only
-	FirstName string `json:"first_name"`                      // User only
-	LastName  string `json:"last_name"`                       // User only
-	Email     string `json:"email" binding:"omitempty,email"` // User only
-	Password  string `json:"password"`                        // User only
+type UserRegisterRequest struct {
+	FirstName string `json:"first_name" binding:"required"`
+	LastName  string `json:"last_name" binding:"required"`
+	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required,min=8"`
 }
 
-func (h *Handler) Register(c *gin.Context) {
-	var req RegisterRequest
+type ClientRegisterRequest struct {
+	Name string `json:"name" binding:"required"`
+}
+
+func (h *Handler) RegisterUser(c *gin.Context) {
+	var req UserRegisterRequest
+	if h.BindJSONWithValidation(c, &req) {
+		return
+	}
+
 	validationErrors := make(map[string]any)
 
-	// 1. Bind and Validate Struct Tags
-	if err := c.ShouldBindJSON(&req); err != nil {
-		var ve validator.ValidationErrors
-		if errors.As(err, &ve) {
-			// Collect struct validation errors but DO NOT RETURN yet
-			for _, fe := range ve {
-				fieldName := fe.Field()
-				if field, ok := reflect.TypeOf(&req).Elem().FieldByName(fe.StructField()); ok {
-					if tag := field.Tag.Get("json"); tag != "" {
-						fieldName = strings.Split(tag, ",")[0]
-					}
-				}
-				validationErrors[fieldName] = msgForRegisterTag(fe.Tag())
-			}
-		} else {
-			// JSON Parsing Error (Syntax) - Return immediately
-			h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
-			return
-		}
+	// Password complexity
+	passErrors := validatePassword(req.Password)
+	if len(passErrors) > 0 {
+		validationErrors["password"] = passErrors
 	}
 
-	// 2. Manual Validations based on Type
-	// We proceed even if struct validation failed, to catch other errors.
-	if req.Type == "user" {
-		userErrors := h.validateUserReq(req)
-		mergeErrors(validationErrors, userErrors)
-	} else if req.Type == "client" {
-		clientErrors := h.validateClientReq(req)
-		mergeErrors(validationErrors, clientErrors)
+	// Check email unique
+	var count int64
+	h.DB.Model(&models.User{}).Where("email = ?", req.Email).Count(&count)
+	if count > 0 {
+		validationErrors["email"] = "Email already registered"
 	}
 
-	// 3. Check if any errors exist
 	if len(validationErrors) > 0 {
 		h.RespondValidationError(c, validationErrors)
 		return
 	}
-
-	// 4. Create Resource
-	if req.Type == "user" {
-		h.createUser(c, req)
-	} else {
-		h.createClient(c, req)
-	}
-}
-
-func mergeErrors(dest, src map[string]any) {
-	for k, v := range src {
-		if existing, ok := dest[k]; ok {
-			// If collision, create list or append
-			var list []string
-			
-			// Handle existing value
-			switch val := existing.(type) {
-			case string:
-				list = append(list, val)
-			case []string:
-				list = append(list, val...)
-			}
-
-			// Handle new value
-			switch val := v.(type) {
-			case string:
-				list = append(list, val)
-			case []string:
-				list = append(list, val...)
-			}
-			
-			dest[k] = list
-		} else {
-			dest[k] = v
-		}
-	}
-}
-
-func (h *Handler) validateUserReq(req RegisterRequest) map[string]any {
-	errors := make(map[string]any)
-
-	if req.FirstName == "" {
-		errors["first_name"] = "This field is required"
-	}
-	if req.LastName == "" {
-		errors["last_name"] = "This field is required"
-	}
-	if req.Email == "" {
-		errors["email"] = "This field is required"
-	}
-	if req.Password == "" {
-		errors["password"] = "This field is required"
-	}
-
-	// Password complexity
-	if req.Password != "" {
-		passErrors := validatePassword(req.Password)
-		if len(passErrors) > 0 {
-			errors["password"] = passErrors
-		}
-	}
-
-	// Check email unique (only if email is provided, otherwise redundant with required)
-	if req.Email != "" {
-		var count int64
-		h.DB.Model(&models.User{}).Where("email = ?", req.Email).Count(&count)
-		if count > 0 {
-			// Check if we already have an error for email (e.g. from binder)
-			// But here we return a fresh map, mergeErrors handles collision.
-			errors["email"] = "Email already registered"
-		}
-	}
-
-	return errors
-}
-
-func (h *Handler) validateClientReq(req RegisterRequest) map[string]any {
-	errors := make(map[string]any)
-
-	if req.Name == "" {
-		errors["name"] = "This field is required"
-	}
-
-	// Check name unique
-	if req.Name != "" {
-		var count int64
-		h.DB.Model(&models.Client{}).Where("name = ?", req.Name).Count(&count)
-		if count > 0 {
-			errors["name"] = "Client name already registered"
-		}
-	}
-
-	return errors
-}
-
-func msgForRegisterTag(tag string) string {
-	switch tag {
-	case "required":
-		return "This field is required"
-	case "email":
-		return "Invalid email"
-	case "oneof":
-		return "Should be one of [user client]"
-	}
-	return "Invalid value"
-}
-
-func (h *Handler) createUser(c *gin.Context, req RegisterRequest) {
-	// Validation already done
 
 	// Encrypt password
 	hashedPassword, err := utils.HashPassword(req.Password)
@@ -217,8 +91,25 @@ func (h *Handler) createUser(c *gin.Context, req RegisterRequest) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func (h *Handler) createClient(c *gin.Context, req RegisterRequest) {
-	// Validation already done
+func (h *Handler) RegisterClient(c *gin.Context) {
+	var req ClientRegisterRequest
+	if h.BindJSONWithValidation(c, &req) {
+		return
+	}
+
+	validationErrors := make(map[string]any)
+
+	// Check name unique
+	var count int64
+	h.DB.Model(&models.Client{}).Where("name = ?", req.Name).Count(&count)
+	if count > 0 {
+		validationErrors["name"] = "Client name already registered"
+	}
+
+	if len(validationErrors) > 0 {
+		h.RespondValidationError(c, validationErrors)
+		return
+	}
 
 	// Generate Secret
 	secret, err := utils.GenerateRandomString(32)

@@ -94,12 +94,16 @@ func (h *Handler) RespondInternalError(c *gin.Context, err error, code int) {
 	})
 }
 
-func msgForValidationTag(tag string) string {
-	switch tag {
+func msgForValidationTag(fe validator.FieldError) string {
+	switch fe.Tag() {
 	case "required":
 		return "This field is required"
 	case "email":
 		return "Invalid email"
+	case "oneof":
+		return "Should be one of [" + strings.ReplaceAll(fe.Param(), " ", ", ") + "]"
+	case "min":
+		return "Should be at least " + fe.Param() + " characters long"
 	}
 	return "Invalid value"
 }
@@ -121,7 +125,7 @@ func (h *Handler) BindJSONWithValidation(c *gin.Context, obj any) bool {
 						fieldName = strings.Split(tag, ",")[0]
 					}
 				}
-				out[fieldName] = msgForValidationTag(fe.Tag())
+				out[fieldName] = msgForValidationTag(fe)
 			}
 			h.RespondValidationError(c, out)
 			return true
