@@ -20,6 +20,7 @@ type User struct {
 type Client struct {
 	ID         uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
 	Name       string    `gorm:"uniqueIndex;not null"`
+	FrontendURI string    `gorm:"not null"`
 	Secret     string    `gorm:"not null"` // Encrypted
 	PrivateKey string    `gorm:"not null"` // PEM encoded
 	PublicKey  string    `gorm:"not null"` // PEM encoded
