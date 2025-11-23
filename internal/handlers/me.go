@@ -67,7 +67,7 @@ func (h *Handler) UserMe(c *gin.Context) {
 	// 3. Validate Token with Public Key
 	validToken, validClaims, err := utils.ValidateAccessToken(tokenString, client.PublicKey)
 	if err != nil || !validToken.Valid {
-		h.RespondError(c, http.StatusUnauthorized, err, fmt.Sprintf("Invalid token", err))
+		h.RespondError(c, http.StatusUnauthorized, err, fmt.Sprintf("Invalid token"))
 		return
 	}
 
