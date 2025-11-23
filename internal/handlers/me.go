@@ -3,7 +3,6 @@ package handlers
 import (
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -67,7 +66,7 @@ func (h *Handler) UserMe(c *gin.Context) {
 	// 3. Validate Token with Public Key
 	validToken, validClaims, err := utils.ValidateAccessToken(tokenString, client.PublicKey)
 	if err != nil || !validToken.Valid {
-		h.RespondError(c, http.StatusUnauthorized, err, fmt.Sprintf("Invalid token"))
+		h.RespondError(c, http.StatusUnauthorized, err, "Invalid token")
 		return
 	}
 
