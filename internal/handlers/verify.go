@@ -8,18 +8,22 @@ import (
 	"github.com/google/uuid"
 )
 
+type VerifyEmailRequest struct {
+	Code string `json:"code" binding:"required"`
+}
+
 func (h *Handler) VerifyEmail(c *gin.Context) {
-	code := c.Query("code")
-	if code == "" {
-		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte("<h1>Missing verification code</h1>"))
+	var req VerifyEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
 		return
 	}
 
 	// Retrieve user ID from Redis
-	key := "user:verification:" + code
+	key := "user:verification:" + req.Code
 	userIDStr, err := h.RedisClient.Get(c, key).Result()
 	if err != nil {
-		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte("<h1>Invalid or expired verification code</h1>"))
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid or expired verification code")
 		return
 	}
 
@@ -37,7 +41,7 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	}
 
 	if user.Verified {
-		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<h1>Email already verified</h1>"))
+		c.JSON(http.StatusOK, gin.H{"message": "Email already verified"})
 		return
 	}
 
@@ -50,5 +54,5 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	// Delete code from Redis
 	h.RedisClient.Del(c, key)
 
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<h1>Email verified successfully</h1>"))
+	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
 }
