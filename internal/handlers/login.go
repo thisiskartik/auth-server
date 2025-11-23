@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"auth-system/internal/middleware"
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
 	"context"
@@ -83,6 +84,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	slog.Info("User logged in", "user_id", user.ID, "client_id", client.ID)
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	slog.Info("User logged in", "user_id", user.ID, "client_id", client.ID, "trace_id", traceID	)
 	c.JSON(http.StatusOK, gin.H{"code": code})
 }

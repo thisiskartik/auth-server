@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"auth-system/internal/middleware"
 	"auth-system/internal/utils"
 	"context"
 	"log/slog"
@@ -54,6 +55,7 @@ func (h *Handler) Logout(c *gin.Context) {
 		return
 	}
 
-	slog.Info("RefreshToken blocked", "key", key, "ttl", ttl)
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	slog.Info("RefreshToken blocked", "key", key, "ttl", ttl, "trace_id", traceID)
 	c.Status(http.StatusNoContent)
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"auth-system/internal/middleware"
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
 	"context"
@@ -92,8 +93,8 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	}
 
 	// 5. Return Response
-	
-	slog.Info("Token exchanged", "client_id", client.ID, "user_id", data.UserID)
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	slog.Info("Token exchanged", "client_id", client.ID, "user_id", data.UserID, "trace_id", traceID)
 	c.JSON(http.StatusOK, gin.H{
 		"access_token":  accessToken,
 		"refresh_token": refreshToken,
@@ -154,7 +155,8 @@ func (h *Handler) OAuthRefresh(c *gin.Context) {
 		return
 	}
 
-	slog.Info("Token refreshed", "client_id", client.ID, "user_id", userID)
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	slog.Info("Token refreshed", "client_id", client.ID, "user_id", userID, "trace_id", traceID)
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": accessToken,
 		"token_type":   "Bearer",
