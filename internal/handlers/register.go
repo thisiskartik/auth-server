@@ -27,11 +27,14 @@ type ClientRegisterRequest struct {
 
 func (h *Handler) RegisterUser(c *gin.Context) {
 	var req UserRegisterRequest
-	if h.BindJSONWithValidation(c, &req) {
+	validationErrors, err := h.GetValidationErrors(c, &req)
+	if err != nil {
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
 		return
 	}
-
-	validationErrors := make(map[string]any)
+	if validationErrors == nil {
+		validationErrors = make(map[string]any)
+	}
 
 	// Password complexity
 	// We run this even if there are validation errors, because we want to show all errors.
@@ -133,11 +136,14 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 
 func (h *Handler) RegisterClient(c *gin.Context) {
 	var req ClientRegisterRequest
-	if h.BindJSONWithValidation(c, &req) {
+	validationErrors, err := h.GetValidationErrors(c, &req)
+	if err != nil {
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
 		return
 	}
-
-	validationErrors := make(map[string]any)
+	if validationErrors == nil {
+		validationErrors = make(map[string]any)
+	}
 
 	// Check name unique
 	if req.Name != "" {
