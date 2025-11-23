@@ -50,17 +50,13 @@ func (h *Handler) RespondError(c *gin.Context, status int, err error, message st
 }
 
 func (h *Handler) RespondValidationError(c *gin.Context, fields map[string]any) {
-	traceID, _ := c.Get(middleware.TraceIDKey)
-	
 	slog.Warn("Validation Error",
 		"fields", fields,
-		"trace_id", traceID,
 	)
 	
 	c.JSON(http.StatusBadRequest, ErrorResponse{
 		Error:   "Validation Failed",
 		Fields:  fields,
-		TraceID: traceID.(string),
 	})
 }
 
