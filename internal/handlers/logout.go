@@ -40,9 +40,8 @@ func (h *Handler) Logout(c *gin.Context) {
 		expTime := time.Unix(int64(exp), 0)
 		ttl = time.Until(expTime)
 	} else {
-		// If exp claim is missing, block indefinitely (0 expiration in Redis typically means no expiry,
-		// but check specific Redis client behavior. Usually 0 means 'expire immediately' or 'persist'.
-		// In Set command: 0 means no expiration.)
+		// If exp claim is missing, block indefinitely.
+		// In go-redis, a duration of 0 means the key has no expiration time (persistent).
 		ttl = 0
 	}
 
