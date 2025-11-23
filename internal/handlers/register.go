@@ -21,8 +21,7 @@ type UserRegisterRequest struct {
 }
 
 type ClientRegisterRequest struct {
-	Name        string `json:"name" binding:"required"`
-	FrontendURI string `json:"frontend_uri" binding:"required"`
+	Name string `json:"name" binding:"required"`
 }
 
 func (h *Handler) RegisterUser(c *gin.Context) {
@@ -178,11 +177,10 @@ func (h *Handler) RegisterClient(c *gin.Context) {
 	}
 
 	client := models.Client{
-		Name:        req.Name,
-		FrontendURI: req.FrontendURI,
-		Secret:      hashedSecret,
-		PrivateKey:  privKey,
-		PublicKey:   pubKey,
+		Name:       req.Name,
+		Secret:     hashedSecret,
+		PrivateKey: privKey,
+		PublicKey:  pubKey,
 	}
 
 	if err := h.DB.Create(&client).Error; err != nil {
@@ -191,21 +189,19 @@ func (h *Handler) RegisterClient(c *gin.Context) {
 	}
 
 	response := struct {
-		ID          uuid.UUID `json:"id"`
-		Name        string    `json:"name"`
-		FrontendURI string    `json:"frontend_uri"`
-		Secret      string    `json:"secret"`
-		PublicKey   string    `json:"public_key"`
-		CreatedAt   time.Time `json:"created_at"`
-		UpdatedAt   time.Time `json:"updated_at"`
+		ID        uuid.UUID `json:"id"`
+		Name      string    `json:"name"`
+		Secret    string    `json:"secret"`
+		PublicKey string    `json:"public_key"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
 	}{
-		ID:          client.ID,
-		Name:        client.Name,
-		FrontendURI: client.FrontendURI,
-		Secret:      secret, // Return PLAIN secret once
-		PublicKey:   client.PublicKey,
-		CreatedAt:   client.CreatedAt,
-		UpdatedAt:   client.UpdatedAt,
+		ID:        client.ID,
+		Name:      client.Name,
+		Secret:    secret, // Return PLAIN secret once
+		PublicKey: client.PublicKey,
+		CreatedAt: client.CreatedAt,
+		UpdatedAt: client.UpdatedAt,
 	}
 
 	traceID, _ := c.Get(middleware.TraceIDKey)
