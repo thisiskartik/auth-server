@@ -108,6 +108,18 @@ func (h *Handler) OAuthRefresh(c *gin.Context) {
 	}
 	refreshToken := req.RefreshToken
 
+	// Check if blocked in Redis
+	key := "blocked_refresh_token:" + refreshToken
+	exists, err := h.RedisClient.Exists(context.Background(), key).Result()
+	if err != nil {
+		h.RespondInternalError(c, err, 3006)
+		return
+	}
+	if exists > 0 {
+		h.RespondError(c, http.StatusUnauthorized, nil, "Refresh token is blocked")
+		return
+	}
+
 	// 2. Validate Refresh Token
 	token, claims, err := utils.ValidateRefreshToken(refreshToken, h.Config.JWTSecret)
 	if err != nil || !token.Valid {
