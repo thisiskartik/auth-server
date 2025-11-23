@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"auth-system/internal/middleware"
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
 	"errors"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +34,14 @@ func (h *Handler) Register(c *gin.Context) {
 		if errors.As(err, &ve) {
 			out := make(map[string]any)
 			for _, fe := range ve {
-				out[fe.Field()] = msgForTag(fe.Tag())
+				// Use the JSON tag name instead of the struct field name
+				fieldName := fe.Field()
+				if field, ok := reflect.TypeOf(&req).Elem().FieldByName(fe.StructField()); ok {
+					if tag := field.Tag.Get("json"); tag != "" {
+						fieldName = strings.Split(tag, ",")[0]
+					}
+				}
+				out[fieldName] = msgForTag(fe.Tag())
 			}
 			h.RespondValidationError(c, out)
 			return
@@ -135,7 +145,8 @@ func (h *Handler) registerUser(c *gin.Context, req RegisterRequest) {
 		UpdatedAt: user.UpdatedAt,
 	}
 
-	slog.Info("User registered", "user_id", user.ID, "email", user.Email)
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	slog.Info("User registered", "user_id", user.ID, "email", user.Email, "trace_id", traceID)
 	c.JSON(http.StatusCreated, response)
 }
 
@@ -207,7 +218,8 @@ func (h *Handler) registerClient(c *gin.Context, req RegisterRequest) {
 		UpdatedAt: client.UpdatedAt,
 	}
 
-	slog.Info("Client registered", "client_id", client.ID, "client_name", client.Name)
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	slog.Info("Client registered", "client_id", client.ID, "client_name", client.Name, "trace_id", traceID)
 	c.JSON(http.StatusCreated, response)
 }
 
