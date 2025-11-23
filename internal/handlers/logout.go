@@ -35,14 +35,16 @@ func (h *Handler) Logout(c *gin.Context) {
 	}
 
 	// 3. Calculate TTL
-	exp, ok := claims["exp"].(float64)
-	if !ok {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token claims: exp")
-		return
+	var ttl time.Duration
+	if exp, ok := claims["exp"].(float64); ok {
+		expTime := time.Unix(int64(exp), 0)
+		ttl = time.Until(expTime)
+	} else {
+		// If exp claim is missing, block indefinitely (0 expiration in Redis typically means no expiry,
+		// but check specific Redis client behavior. Usually 0 means 'expire immediately' or 'persist'.
+		// In Set command: 0 means no expiration.)
+		ttl = 0
 	}
-
-	expTime := time.Unix(int64(exp), 0)
-	ttl := time.Until(expTime)
 
 	// 4. Block Token in Redis
 	// Key format: blocked_refresh_token:{refresh_token}

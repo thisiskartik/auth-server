@@ -35,7 +35,9 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 	}
 
 	// 3. Check Redis for Code & Delete immediately (Atomic)
-	val, err := h.RedisClient.GetDel(context.Background(), req.Code).Result()
+	// Key format: auth_code:{code}
+	key := "auth_code:" + req.Code
+	val, err := h.RedisClient.GetDel(context.Background(), key).Result()
 	if err != nil {
 		h.RespondError(c, http.StatusUnauthorized, err, "Invalid or expired code")
 		return
