@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+For each request when we log something always send the trace id which can be fetched using `traceID, _ := c.Get(middleware.TraceIDKey)` For internal server errors the trace id and error code is automatically sent using the h.RespondInternalError

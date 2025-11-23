@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"auth-system/internal/models"
+	"auth-system/internal/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type VerifyEmailRequest struct {
@@ -95,10 +95,7 @@ func (h *Handler) ResendVerificationCode(c *gin.Context) {
 	}
 
 	// Send verification email
-	traceID, _ := c.Get(middleware.TraceIDKey)
-	traceIDStr, _ := traceID.(string)
-
-	utils.SendVerificationEmail(user.Email, verificationCode, traceIDStr)
+	utils.SendVerificationEmail(c, user.Email, verificationCode)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Verification code resent successfully"})
 }

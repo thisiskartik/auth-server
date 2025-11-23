@@ -4,7 +4,6 @@ import (
 	"auth-system/internal/middleware"
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -107,10 +106,7 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 	}
 
 	// Send verification email
-	traceID, _ := c.Get(middleware.TraceIDKey)
-	traceIDStr, _ := traceID.(string)
-
-	utils.SendVerificationEmail(user.Email, verificationCode, traceIDStr)
+	utils.SendVerificationEmail(c, user.Email, verificationCode)
 
 	// Create Response DTO
 	response := struct {

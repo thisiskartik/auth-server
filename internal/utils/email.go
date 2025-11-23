@@ -1,8 +1,14 @@
 package utils
 
-import "log/slog"
+import (
+	"auth-system/internal/middleware"
+	"log/slog"
 
-func SendVerificationEmail(email string, code string, traceID string) {
+	"github.com/gin-gonic/gin"
+)
+
+func SendVerificationEmail(c *gin.Context, email string, code string) {
 	// Placeholder for sending email
+	traceID, _ := c.Get(middleware.TraceIDKey)
 	slog.Info("Sending verification email", "to", email, "code", code, "trace_id", traceID)
 }

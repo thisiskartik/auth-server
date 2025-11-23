@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+
+Whenever you're making a new endpoint which required validation of input use the h.BindJSONWithValidation from internal/handlers/common.go so that it checks each error from the binding tags.
+In case there are additional checks that needs to be made use h.GetValidationErrors and MergeErrors from internal/handlers/common.go like in the register endpoints.
