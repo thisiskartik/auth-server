@@ -12,6 +12,7 @@ type User struct {
 	LastName  string    `gorm:"not null"`
 	Email     string    `gorm:"uniqueIndex;not null"`
 	Password  string    `gorm:"not null"`
+	Verified  bool      `gorm:"default:false"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
