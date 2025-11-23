@@ -16,6 +16,7 @@ type Config struct {
 	DBPort          string
 	RedisAddr       string
 	RedisPassword   string
+	ServerHost      string
 	ServerPort      string
 	JWTSecret       string
 	AccessTokenExp  int
@@ -63,6 +64,12 @@ func LoadConfig(strict bool) (*Config, error) {
 
 	// Optional
 	cfg.RedisPassword, _ = getEnv("REDIS_PASSWORD")
+
+	cfg.ServerHost, err = getEnvOrSkip("SERVER_HOST")
+	if err != nil { return nil, err }
+	if cfg.ServerHost == "" {
+		cfg.ServerHost = "localhost" // Default
+	}
 
 	cfg.ServerPort, err = getEnvOrSkip("SERVER_PORT")
 	if err != nil { return nil, err }
