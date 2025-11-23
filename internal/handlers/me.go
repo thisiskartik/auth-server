@@ -80,7 +80,7 @@ func (h *Handler) UserMe(c *gin.Context) {
 
 	var user models.User
 	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
-		h.RespondError(c, http.StatusNotFound, err, "Invalid token")
+		h.RespondError(c, http.StatusUnauthorized, err, "Invalid token")
 		return
 	}
 
