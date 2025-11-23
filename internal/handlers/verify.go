@@ -9,7 +9,12 @@ import (
 )
 
 type VerifyEmailRequest struct {
-	Code string `json:"code" binding:"required"`
+	Code  string `json:"code" binding:"required"`
+	Email string `json:"email" binding:"required,email"`
+}
+
+type ResendVerificationRequest struct {
+	Email string `json:"email" binding:"required,email"`
 }
 
 func (h *Handler) VerifyEmail(c *gin.Context) {
@@ -19,23 +24,23 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	// Retrieve user ID from Redis
-	key := "user:verification:" + req.Code
-	userIDStr, err := h.RedisClient.Get(c, key).Result()
+	// Retrieve code from Redis
+	key := "user:verification:" + req.Email
+	storedCode, err := h.RedisClient.Get(c, key).Result()
 	if err != nil {
+		// Could be expired or invalid email
 		h.RespondError(c, http.StatusBadRequest, err, "Invalid or expired verification code")
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		h.RespondInternalError(c, err, 2001)
+	if storedCode != req.Code {
+		h.RespondError(c, http.StatusBadRequest, nil, "Invalid verification code")
 		return
 	}
 
-	// Update user verified status
+	// Find user
 	var user models.User
-	if err := h.DB.First(&user, userID).Error; err != nil {
+	if err := h.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		h.RespondInternalError(c, err, 2002)
 		return
 	}
@@ -56,3 +61,49 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
 }
+
+func (h *Handler) ResendVerificationCode(c *gin.Context) {
+	var req ResendVerificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
+		return
+	}
+
+	// Check if user exists and is not verified
+	var user models.User
+	if err := h.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+		h.RespondError(c, http.StatusNotFound, err, "User not found")
+		return
+	}
+
+	if user.Verified {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Email already verified"})
+		return
+	}
+
+	// Generate verification code
+	verificationCode, err := utils.GenerateRandomDigits(6)
+	if err != nil {
+		h.RespondInternalError(c, err, 1007)
+		return
+	}
+
+	// Store verification code in Redis
+	// Key: user:verification:{email} -> code
+	err = h.RedisClient.Set(c, "user:verification:"+req.Email, verificationCode, 0).Err()
+	if err != nil {
+		h.RespondInternalError(c, err, 1008)
+		return
+	}
+
+	// Send verification email
+	verificationLink := fmt.Sprintf("http://%s:%s/api/v1/authorization-server/user/verify?code=%s", h.Config.ServerHost, h.Config.ServerPort, verificationCode)
+
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	traceIDStr, _ := traceID.(string)
+
+	utils.SendVerificationEmail(user.Email, verificationLink, traceIDStr)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Verification code resent successfully"})
+}
+

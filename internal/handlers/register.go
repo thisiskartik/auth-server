@@ -92,15 +92,15 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 	}
 
 	// Generate verification code
-	verificationCode, err := utils.GenerateRandomString(32)
+	verificationCode, err := utils.GenerateRandomDigits(6)
 	if err != nil {
 		h.RespondInternalError(c, err, 1007)
 		return
 	}
 
 	// Store verification code in Redis
-	// Key: user:verification:{code} -> user_id
-	err = h.RedisClient.Set(c, "user:verification:"+verificationCode, user.ID.String(), 24*time.Hour).Err()
+	// Key: user:verification:{email} -> code
+	err = h.RedisClient.Set(c, "user:verification:"+user.Email, verificationCode, 0).Err()
 	if err != nil {
 		h.RespondInternalError(c, err, 1008)
 		return

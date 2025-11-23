@@ -67,9 +67,6 @@ func LoadConfig(strict bool) (*Config, error) {
 
 	cfg.ServerHost, err = getEnvOrSkip("SERVER_HOST")
 	if err != nil { return nil, err }
-	if cfg.ServerHost == "" {
-		cfg.ServerHost = "localhost" // Default
-	}
 
 	cfg.ServerPort, err = getEnvOrSkip("SERVER_PORT")
 	if err != nil { return nil, err }

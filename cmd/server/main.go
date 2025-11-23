@@ -60,6 +60,7 @@ func main() {
 		api.GET("/client/me", h.ClientMe)
 		api.GET("/user/me", h.UserMe)
 		api.POST("/user/verify", h.VerifyEmail)
+		api.POST("/user/verify/resend", h.ResendVerificationCode)
 	}
 
 	// 6. Start Server
