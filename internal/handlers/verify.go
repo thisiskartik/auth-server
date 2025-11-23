@@ -11,7 +11,7 @@ import (
 func (h *Handler) VerifyEmail(c *gin.Context) {
 	code := c.Query("code")
 	if code == "" {
-		h.RespondError(c, http.StatusBadRequest, nil, "Missing verification code")
+		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte("<h1>Missing verification code</h1>"))
 		return
 	}
 
@@ -19,7 +19,7 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	key := "user:verification:" + code
 	userIDStr, err := h.RedisClient.Get(c, key).Result()
 	if err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, "Invalid or expired verification code")
+		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte("<h1>Invalid or expired verification code</h1>"))
 		return
 	}
 
@@ -37,7 +37,7 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	}
 
 	if user.Verified {
-		c.JSON(http.StatusOK, gin.H{"message": "Email already verified"})
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<h1>Email already verified</h1>"))
 		return
 	}
 
@@ -50,5 +50,5 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	// Delete code from Redis
 	h.RedisClient.Del(c, key)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<h1>Email verified successfully</h1>"))
 }

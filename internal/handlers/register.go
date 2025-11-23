@@ -107,7 +107,7 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 	}
 
 	// Send verification email
-	verificationLink := fmt.Sprintf("http://%s:%s/api/v1/authorization-server/verify?code=%s", h.Config.ServerHost, h.Config.ServerPort, verificationCode)
+	verificationLink := fmt.Sprintf("http://%s:%s/api/v1/authorization-server/user/verify?code=%s", h.Config.ServerHost, h.Config.ServerPort, verificationCode)
 	
 	traceID, _ := c.Get(middleware.TraceIDKey)
 	traceIDStr, _ := traceID.(string)

@@ -59,7 +59,7 @@ func main() {
 		api.POST("/oauth/refresh", h.OAuthRefresh)
 		api.GET("/client/me", h.ClientMe)
 		api.GET("/user/me", h.UserMe)
-		api.GET("/verify", h.VerifyEmail)
+		api.GET("/user/verify", h.VerifyEmail)
 	}
 
 	// 6. Start Server
