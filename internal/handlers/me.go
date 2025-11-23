@@ -17,8 +17,9 @@ func (h *Handler) ClientMe(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"name":       client.Name,
-		"public_key": client.PublicKey,
+		"name":         client.Name,
+		"public_key":   client.PublicKey,
+		"frontend_uri": client.FrontendURI,
 	})
 }
 
