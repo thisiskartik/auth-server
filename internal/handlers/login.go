@@ -28,8 +28,7 @@ type AuthCodeData struct {
 
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, err.Error())
+	if h.BindJSONWithValidation(c, &req) {
 		return
 	}
 

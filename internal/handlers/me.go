@@ -41,46 +41,46 @@ func (h *Handler) UserMe(c *gin.Context) {
 	// 1. Parse Unverified to get Audience (Client ID)
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
 	if err != nil {
-		h.RespondError(c, http.StatusUnauthorized, err, "Invalid token format")
+		h.RespondError(c, http.StatusUnauthorized, err, "Invalid token")
 		return
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token claims")
+		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token")
 		return
 	}
 
 	clientID, ok := claims["aud"].(string)
 	if !ok {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Token missing audience")
+		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token")
 		return
 	}
 
 	// 2. Fetch Client Public Key
 	var client models.Client
 	if err := h.DB.Where("id = ?", clientID).First(&client).Error; err != nil {
-		h.RespondError(c, http.StatusUnauthorized, err, "Client not found")
+		h.RespondError(c, http.StatusUnauthorized, err, "Invalid token")
 		return
 	}
 
 	// 3. Validate Token with Public Key
 	validToken, validClaims, err := utils.ValidateAccessToken(tokenString, client.PublicKey)
 	if err != nil || !validToken.Valid {
-		h.RespondError(c, http.StatusUnauthorized, err, fmt.Sprintf("Invalid token signature: %v", err))
+		h.RespondError(c, http.StatusUnauthorized, err, fmt.Sprintf("Invalid token", err))
 		return
 	}
 
 	// 4. Fetch User Details
 	userID, ok := validClaims["sub"].(string)
 	if !ok {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token claims: sub")
+		h.RespondError(c, http.StatusUnauthorized, nil, "Invalid token")
 		return
 	}
 
 	var user models.User
 	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
-		h.RespondError(c, http.StatusNotFound, err, "User not found")
+		h.RespondError(c, http.StatusNotFound, err, "Invalid token")
 		return
 	}
 

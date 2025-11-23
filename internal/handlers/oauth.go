@@ -14,7 +14,7 @@ import (
 
 type TokenRequest struct {
 	Code         string `json:"code" binding:"required"`
-	CodeVerifier string `json:"code_verifier"` // Optional in strict prompt, but needed for PKCE
+	CodeVerifier string `json:"code_verifier" binding:"required"` // Optional in strict prompt, but needed for PKCE
 }
 
 type RefreshRequest struct {
@@ -30,8 +30,7 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 
 	// 2. Read Request
 	var req TokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, err.Error())
+	if h.BindJSONWithValidation(c, &req) {
 		return
 	}
 
@@ -104,8 +103,7 @@ func (h *Handler) OAuthToken(c *gin.Context) {
 func (h *Handler) OAuthRefresh(c *gin.Context) {
 	// 1. Read Refresh Token from Body
 	var req RefreshRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, "Refresh token required in body")
+	if h.BindJSONWithValidation(c, &req) {
 		return
 	}
 	refreshToken := req.RefreshToken

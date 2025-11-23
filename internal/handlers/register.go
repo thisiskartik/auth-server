@@ -42,7 +42,7 @@ func (h *Handler) Register(c *gin.Context) {
 						fieldName = strings.Split(tag, ",")[0]
 					}
 				}
-				validationErrors[fieldName] = msgForTag(fe.Tag())
+				validationErrors[fieldName] = msgForRegisterTag(fe.Tag())
 			}
 		} else {
 			// JSON Parsing Error (Syntax) - Return immediately
@@ -161,7 +161,7 @@ func (h *Handler) validateClientReq(req RegisterRequest) map[string]any {
 	return errors
 }
 
-func msgForTag(tag string) string {
+func msgForRegisterTag(tag string) string {
 	switch tag {
 	case "required":
 		return "This field is required"

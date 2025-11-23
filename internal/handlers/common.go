@@ -4,10 +4,14 @@ import (
 	"auth-system/internal/config"
 	"auth-system/internal/database"
 	"auth-system/internal/middleware"
+	"errors"
 	"log/slog"
 	"net/http"
+	"reflect"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -50,8 +54,11 @@ func (h *Handler) RespondError(c *gin.Context, status int, err error, message st
 }
 
 func (h *Handler) RespondValidationError(c *gin.Context, fields map[string]any) {
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	
 	slog.Warn("Validation Error",
 		"fields", fields,
+		"trace_id", traceID,
 	)
 	
 	c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -85,4 +92,43 @@ func (h *Handler) RespondInternalError(c *gin.Context, err error, code int) {
 		Code:    code,
 		TraceID: traceID,
 	})
+}
+
+func msgForValidationTag(tag string) string {
+	switch tag {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email"
+	}
+	return "Invalid value"
+}
+
+// BindJSONWithValidation attempts to bind the request body to the given struct.
+// If binding fails due to validation errors, it returns true (handled) and sends a Validation Error response.
+// If binding fails due to JSON syntax errors, it returns true (handled) and sends a Bad Request response.
+// If binding succeeds, it returns false, and the caller should proceed.
+func (h *Handler) BindJSONWithValidation(c *gin.Context, obj any) bool {
+	if err := c.ShouldBindJSON(obj); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			out := make(map[string]any)
+			for _, fe := range ve {
+				fieldName := fe.Field()
+				// Use reflection to get the JSON tag from the struct
+				if field, ok := reflect.TypeOf(obj).Elem().FieldByName(fe.StructField()); ok {
+					if tag := field.Tag.Get("json"); tag != "" {
+						fieldName = strings.Split(tag, ",")[0]
+					}
+				}
+				out[fieldName] = msgForValidationTag(fe.Tag())
+			}
+			h.RespondValidationError(c, out)
+			return true
+		}
+		// JSON Parsing Error (Syntax)
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
+		return true
+	}
+	return false
 }
