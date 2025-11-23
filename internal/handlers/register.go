@@ -27,14 +27,11 @@ type ClientRegisterRequest struct {
 
 func (h *Handler) RegisterUser(c *gin.Context) {
 	var req UserRegisterRequest
-	validationErrors, err := h.GetValidationErrors(c, &req)
-	if err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
+	if h.BindJSONWithValidation(c, &req) {
 		return
 	}
-	if validationErrors == nil {
-		validationErrors = make(map[string]any)
-	}
+
+	validationErrors := make(map[string]any)
 
 	// Password complexity
 	// We run this even if there are validation errors, because we want to show all errors.
@@ -107,12 +104,10 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 	}
 
 	// Send verification email
-	verificationLink := fmt.Sprintf("http://%s:%s/api/v1/authorization-server/user/verify?code=%s", h.Config.ServerHost, h.Config.ServerPort, verificationCode)
-	
 	traceID, _ := c.Get(middleware.TraceIDKey)
 	traceIDStr, _ := traceID.(string)
 
-	utils.SendVerificationEmail(user.Email, verificationLink, traceIDStr)
+	utils.SendVerificationEmail(user.Email, verificationCode, traceIDStr)
 
 	// Create Response DTO
 	response := struct {
@@ -138,14 +133,11 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 
 func (h *Handler) RegisterClient(c *gin.Context) {
 	var req ClientRegisterRequest
-	validationErrors, err := h.GetValidationErrors(c, &req)
-	if err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
+	if h.BindJSONWithValidation(c, &req) {
 		return
 	}
-	if validationErrors == nil {
-		validationErrors = make(map[string]any)
-	}
+
+	validationErrors := make(map[string]any)
 
 	// Check name unique
 	if req.Name != "" {

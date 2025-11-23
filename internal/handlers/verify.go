@@ -19,8 +19,7 @@ type ResendVerificationRequest struct {
 
 func (h *Handler) VerifyEmail(c *gin.Context) {
 	var req VerifyEmailRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
+	if h.BindJSONWithValidation(c, &req) {
 		return
 	}
 
@@ -64,8 +63,7 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 
 func (h *Handler) ResendVerificationCode(c *gin.Context) {
 	var req ResendVerificationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
+	if h.BindJSONWithValidation(c, &req) {
 		return
 	}
 
@@ -97,12 +95,10 @@ func (h *Handler) ResendVerificationCode(c *gin.Context) {
 	}
 
 	// Send verification email
-	verificationLink := fmt.Sprintf("http://%s:%s/api/v1/authorization-server/user/verify?code=%s", h.Config.ServerHost, h.Config.ServerPort, verificationCode)
-
 	traceID, _ := c.Get(middleware.TraceIDKey)
 	traceIDStr, _ := traceID.(string)
 
-	utils.SendVerificationEmail(user.Email, verificationLink, traceIDStr)
+	utils.SendVerificationEmail(user.Email, verificationCode, traceIDStr)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Verification code resent successfully"})
 }

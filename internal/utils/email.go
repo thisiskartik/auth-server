@@ -2,7 +2,7 @@ package utils
 
 import "log/slog"
 
-func SendVerificationEmail(email string, link string, traceID string) {
+func SendVerificationEmail(email string, code string, traceID string) {
 	// Placeholder for sending email
-	slog.Info("Sending verification email", "to", email, "link", link, "trace_id", traceID)
+	slog.Info("Sending verification email", "to", email, "code", code, "trace_id", traceID)
 }
