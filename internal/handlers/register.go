@@ -26,23 +26,42 @@ type ClientRegisterRequest struct {
 
 func (h *Handler) RegisterUser(c *gin.Context) {
 	var req UserRegisterRequest
-	if h.BindJSONWithValidation(c, &req) {
+	validationErrors, err := h.GetValidationErrors(c, &req)
+	if err != nil {
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
 		return
 	}
-
-	validationErrors := make(map[string]any)
+	if validationErrors == nil {
+		validationErrors = make(map[string]any)
+	}
 
 	// Password complexity
+	// We run this even if there are validation errors, because we want to show all errors.
 	passErrors := validatePassword(req.Password)
 	if len(passErrors) > 0 {
-		validationErrors["password"] = passErrors
+		// Merge password errors
+		if existing, ok := validationErrors["password"]; ok {
+			// convert existing to list and append
+			var list []string
+			if s, ok := existing.(string); ok {
+				list = append(list, s)
+			} else if l, ok := existing.([]string); ok {
+				list = append(list, l...)
+			}
+			list = append(list, passErrors...)
+			validationErrors["password"] = list
+		} else {
+			validationErrors["password"] = passErrors
+		}
 	}
 
 	// Check email unique
-	var count int64
-	h.DB.Model(&models.User{}).Where("email = ?", req.Email).Count(&count)
-	if count > 0 {
-		validationErrors["email"] = "Email already registered"
+	if req.Email != "" {
+		var count int64
+		h.DB.Model(&models.User{}).Where("email = ?", req.Email).Count(&count)
+		if count > 0 {
+			MergeErrors(validationErrors, map[string]any{"email": "Email already registered"})
+		}
 	}
 
 	if len(validationErrors) > 0 {
@@ -93,17 +112,22 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 
 func (h *Handler) RegisterClient(c *gin.Context) {
 	var req ClientRegisterRequest
-	if h.BindJSONWithValidation(c, &req) {
+	validationErrors, err := h.GetValidationErrors(c, &req)
+	if err != nil {
+		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
 		return
 	}
-
-	validationErrors := make(map[string]any)
+	if validationErrors == nil {
+		validationErrors = make(map[string]any)
+	}
 
 	// Check name unique
-	var count int64
-	h.DB.Model(&models.Client{}).Where("name = ?", req.Name).Count(&count)
-	if count > 0 {
-		validationErrors["name"] = "Client name already registered"
+	if req.Name != "" {
+		var count int64
+		h.DB.Model(&models.Client{}).Where("name = ?", req.Name).Count(&count)
+		if count > 0 {
+			MergeErrors(validationErrors, map[string]any{"name": "Client name already registered"})
+		}
 	}
 
 	if len(validationErrors) > 0 {

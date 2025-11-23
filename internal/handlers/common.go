@@ -108,11 +108,8 @@ func msgForValidationTag(fe validator.FieldError) string {
 	return "Invalid value"
 }
 
-// BindJSONWithValidation attempts to bind the request body to the given struct.
-// If binding fails due to validation errors, it returns true (handled) and sends a Validation Error response.
-// If binding fails due to JSON syntax errors, it returns true (handled) and sends a Bad Request response.
-// If binding succeeds, it returns false, and the caller should proceed.
-func (h *Handler) BindJSONWithValidation(c *gin.Context, obj any) bool {
+// GetValidationErrors binds the JSON and returns validation errors or fatal error.
+func (h *Handler) GetValidationErrors(c *gin.Context, obj any) (map[string]any, error) {
 	if err := c.ShouldBindJSON(obj); err != nil {
 		var ve validator.ValidationErrors
 		if errors.As(err, &ve) {
@@ -127,12 +124,56 @@ func (h *Handler) BindJSONWithValidation(c *gin.Context, obj any) bool {
 				}
 				out[fieldName] = msgForValidationTag(fe)
 			}
-			h.RespondValidationError(c, out)
-			return true
+			return out, nil
 		}
 		// JSON Parsing Error (Syntax)
+		return nil, err
+	}
+	return nil, nil
+}
+
+// BindJSONWithValidation attempts to bind the request body to the given struct.
+// If binding fails due to validation errors, it returns true (handled) and sends a Validation Error response.
+// If binding fails due to JSON syntax errors, it returns true (handled) and sends a Bad Request response.
+// If binding succeeds, it returns false, and the caller should proceed.
+func (h *Handler) BindJSONWithValidation(c *gin.Context, obj any) bool {
+	validationErrors, err := h.GetValidationErrors(c, obj)
+	if err != nil {
 		h.RespondError(c, http.StatusBadRequest, err, "Invalid JSON")
 		return true
 	}
+	if len(validationErrors) > 0 {
+		h.RespondValidationError(c, validationErrors)
+		return true
+	}
 	return false
+}
+
+func MergeErrors(dest, src map[string]any) {
+	for k, v := range src {
+		if existing, ok := dest[k]; ok {
+			// If collision, create list or append
+			var list []string
+
+			// Handle existing value
+			switch val := existing.(type) {
+			case string:
+				list = append(list, val)
+			case []string:
+				list = append(list, val...)
+			}
+
+			// Handle new value
+			switch val := v.(type) {
+			case string:
+				list = append(list, val)
+			case []string:
+				list = append(list, val...)
+			}
+
+			dest[k] = list
+		} else {
+			dest[k] = v
+		}
+	}
 }
