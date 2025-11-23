@@ -44,11 +44,6 @@ func (h *Handler) Logout(c *gin.Context) {
 	expTime := time.Unix(int64(exp), 0)
 	ttl := time.Until(expTime)
 
-	if ttl <= 0 {
-		h.RespondError(c, http.StatusUnauthorized, nil, "Token expired")
-		return
-	}
-
 	// 4. Block Token in Redis
 	// Key format: blocked_refresh_token:{refresh_token}
 	key := "blocked_refresh_token:" + req.RefreshToken
