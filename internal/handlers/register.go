@@ -37,21 +37,23 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 
 	// Password complexity
 	// We run this even if there are validation errors, because we want to show all errors.
-	passErrors := validatePassword(req.Password)
-	if len(passErrors) > 0 {
-		// Merge password errors
-		if existing, ok := validationErrors["password"]; ok {
-			// convert existing to list and append
-			var list []string
-			if s, ok := existing.(string); ok {
-				list = append(list, s)
-			} else if l, ok := existing.([]string); ok {
-				list = append(list, l...)
+	if req.Password != "" {
+		passErrors := validatePassword(req.Password)
+		if len(passErrors) > 0 {
+			// Merge password errors
+			if existing, ok := validationErrors["password"]; ok {
+				// convert existing to list and append
+				var list []string
+				if s, ok := existing.(string); ok {
+					list = append(list, s)
+				} else if l, ok := existing.([]string); ok {
+					list = append(list, l...)
+				}
+				list = append(list, passErrors...)
+				validationErrors["password"] = list
+			} else {
+				validationErrors["password"] = passErrors
 			}
-			list = append(list, passErrors...)
-			validationErrors["password"] = list
-		} else {
-			validationErrors["password"] = passErrors
 		}
 	}
 
