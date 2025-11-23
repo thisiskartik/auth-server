@@ -4,6 +4,7 @@ import (
 	"auth-system/internal/middleware"
 	"auth-system/internal/models"
 	"auth-system/internal/utils"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -89,6 +90,27 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 		h.RespondInternalError(c, err, 1002)
 		return
 	}
+
+	// Generate verification code
+	verificationCode, err := utils.GenerateRandomDigits(6)
+	if err != nil {
+		h.RespondInternalError(c, err, 1007)
+		return
+	}
+
+	// Store verification code in Redis
+	// Key: user:verification:{email} -> code
+	err = h.RedisClient.Set(c, "user:verification:"+user.Email, verificationCode, 0).Err()
+	if err != nil {
+		h.RespondInternalError(c, err, 1008)
+		return
+	}
+
+	// Send verification email
+	traceID, _ := c.Get(middleware.TraceIDKey)
+	traceIDStr, _ := traceID.(string)
+
+	utils.SendVerificationEmail(user.Email, verificationCode, traceIDStr)
 
 	// Create Response DTO
 	response := struct {

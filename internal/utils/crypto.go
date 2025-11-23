@@ -114,6 +114,18 @@ func GenerateRandomString(n int) (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
+// Random Digits
+func GenerateRandomDigits(n int) (string, error) {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	for i, b := range bytes {
+		bytes[i] = '0' + (b % 10)
+	}
+	return string(bytes), nil
+}
+
 // PKCE Verification (S256)
 func VerifyCodeChallenge(challenge, verifier string) bool {
 	s256 := sha256.Sum256([]byte(verifier))
