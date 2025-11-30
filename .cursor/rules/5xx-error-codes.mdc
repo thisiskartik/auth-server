@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+Every time there is a possibility of 5xx HTTP code which means something went wrong from our side, send an aribitary "code" which is a number and should be unique in the codebase.
