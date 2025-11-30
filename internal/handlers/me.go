@@ -84,9 +84,9 @@ func (h *Handler) UserMe(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"name":       user.FirstName + " " + user.LastName,
-		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
+		"is_verified": user.Verified,
+		"email":       user.Email,
+		"first_name":  user.FirstName,
+		"last_name":   user.LastName,
 	})
 }
