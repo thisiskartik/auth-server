@@ -61,6 +61,8 @@ func main() {
 		api.GET("/user/me", h.UserMe)
 		api.POST("/user/verify", h.VerifyEmail)
 		api.POST("/user/verify/resend", h.ResendVerificationCode)
+		api.POST("/user/password/forgot", h.ForgotPassword)
+		api.POST("/user/password/reset", h.ResetPassword)
 	}
 
 	// 6. Start Server

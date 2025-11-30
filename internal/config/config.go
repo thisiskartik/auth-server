@@ -18,11 +18,12 @@ type Config struct {
 	RedisPassword   string
 	ServerPort      string
 	JWTSecret       string
-	AccessTokenExp  int
-	RefreshTokenExp int
-	AuthCodeExp     int
-	APIVersion      string
-	EncryptionKey   string
+	AccessTokenExp      int
+	RefreshTokenExp     int
+	AuthCodeExp         int
+	PasswordResetExpHours int
+	APIVersion          string
+	EncryptionKey       string
 }
 
 func LoadConfig(strict bool) (*Config, error) {
@@ -89,6 +90,13 @@ func LoadConfig(strict bool) (*Config, error) {
 	if authCodeStr != "" {
 		cfg.AuthCodeExp, err = strconv.Atoi(authCodeStr)
 		if err != nil { return nil, fmt.Errorf("AUTH_CODE_EXP_MINUTES must be an integer") }
+	}
+
+	passwordResetStr, err := getEnvOrSkip("PASSWORD_RESET_EXP_HOURS")
+	if err != nil { return nil, err }
+	if passwordResetStr != "" {
+		cfg.PasswordResetExpHours, err = strconv.Atoi(passwordResetStr)
+		if err != nil { return nil, fmt.Errorf("PASSWORD_RESET_EXP_HOURS must be an integer") }
 	}
 
 	cfg.APIVersion, err = getEnvOrSkip("API_VERSION")
