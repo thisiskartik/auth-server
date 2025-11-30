@@ -16,7 +16,6 @@ type ForgotPasswordRequest struct {
 }
 
 type ResetPasswordRequest struct {
-	Email       string `json:"email" binding:"required,email"`
 	Code        string `json:"code" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
@@ -54,9 +53,9 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	expiration := time.Duration(expirationHours) * time.Hour
 
 	// Store code in Redis with expiration
-	// Key format: user:password:reset:{email} -> code
-	key := "user:password:reset:" + req.Email
-	err = h.RedisClient.Set(c, key, resetCode, expiration).Err()
+	// Key format: user:password:reset:{code} -> email
+	key := "user:password:reset:" + resetCode
+	err = h.RedisClient.Set(c, key, req.Email, expiration).Err()
 	if err != nil {
 		h.RespondInternalError(c, err, 5002)
 		return
@@ -106,23 +105,18 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// Retrieve code from Redis
-	key := "user:password:reset:" + req.Email
-	storedCode, err := h.RedisClient.Get(c, key).Result()
+	// Retrieve email from Redis using code
+	key := "user:password:reset:" + req.Code
+	email, err := h.RedisClient.Get(c, key).Result()
 	if err != nil {
-		// Could be expired or invalid email
+		// Could be expired or invalid code
 		h.RespondError(c, http.StatusBadRequest, err, "Invalid or expired reset code")
-		return
-	}
-
-	if storedCode != req.Code {
-		h.RespondError(c, http.StatusBadRequest, nil, "Invalid reset code")
 		return
 	}
 
 	// Find user
 	var user models.User
-	if err := h.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+	if err := h.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		h.RespondInternalError(c, err, 5003)
 		return
 	}
@@ -145,6 +139,6 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	h.RedisClient.Del(c, key)
 
 	traceID, _ := c.Get(middleware.TraceIDKey)
-	slog.Info("Password reset successful", "email", req.Email, "trace_id", traceID)
+	slog.Info("Password reset successful", "email", email, "trace_id", traceID)
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
 }
